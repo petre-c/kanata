@@ -1,0 +1,46 @@
+;; defsrc is still necessary
+(defcfg
+  process-unmapped-keys yes
+;;  tap-next-release yes ;; Enable tap-next-release behavior
+;;  log-layer-changes yes
+)
+
+(defsrc
+  1    2    3    4    5    6    7    8    9    0
+  caps a s d f i j k l ;
+  u o p m
+  spc
+)
+(defvar
+  tap-time 50
+  hold-time 150
+)
+
+(defalias
+  escctrl esc
+  a (tap-hold $tap-time $hold-time a lmet)
+  s (tap-hold $tap-time $hold-time s lalt)
+  d (tap-hold $tap-time $hold-time d lsft)
+  f (tap-hold $tap-time $hold-time f lctl)
+  j (tap-hold $tap-time $hold-time j rctl)
+  k (tap-hold $tap-time $hold-time k rsft)
+  l (tap-hold $tap-time $hold-time l ralt)
+  ; (tap-hold $tap-time $hold-time ; rmet)
+  i i
+  spfn (tap-hold $tap-time $hold-time spc (layer-toggle fn))
+)
+
+(deflayer base
+  1    2    3    4    5    6    7    8    9    0
+  @escctrl @a @s @d @f @i @j @k @l @;
+  u o p m
+  @spfn
+)
+
+;; Function layer with i,j,k,l as arrow keys
+(deflayer fn
+  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10
+  _    _    _    _    _    up   left down right _
+  home end bspc del
+  _
+)
