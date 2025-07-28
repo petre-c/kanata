@@ -1,35 +1,59 @@
-;; defsrc is still necessary
+;; Global configuration settings
+;; process-unmapped-keys: allows keys not defined in layers to pass through
 (defcfg
   process-unmapped-keys yes
 ;;  tap-next-release yes ;; Enable tap-next-release behavior
 ;;  log-layer-changes yes
 )
 
+;; Source keyboard layout definition
+;; Defines which physical keys are mapped in this configuration
 (defsrc
   1    2    3    4    5    6    7    8    9    0
   caps a s d f i j k l ;
   u o p m
   spc
 )
+
+;; Variables for timing configuration
 (defvar
   tap-time 50
-  hold-time 150
+  hold-time 200
+  key-timing-delay 250  ;; delay for key-timing check
+  tap-timeout 200       ;; timeout for tap in tap-hold-release
+  hold-timeout 500      ;; timeout for hold activation
 )
 
+;; Template for advanced home row modifiers using switch and key-timing
+;; This prevents accidental modifier activation while typing quickly
+(deftemplate charmod (char mod)
+  (switch 
+    ((key-timing 3 less-than $key-timing-delay)) $char break
+    () (tap-hold-release-timeout $tap-timeout $hold-timeout $char $mod $char) break
+  )
+)
+
+;; Key aliases definitions
+;; Defines custom key behaviors including home row modifiers and layer toggles
 (defalias
-  escctrl esc
-  a (tap-hold $tap-time $hold-time a lmet)
-  s (tap-hold $tap-time $hold-time s lalt)
-  d (tap-hold $tap-time $hold-time d lsft)
-  f (tap-hold $tap-time $hold-time f lctl)
-  j (tap-hold $tap-time $hold-time j rctl)
-  k (tap-hold $tap-time $hold-time k rsft)
-  l (tap-hold $tap-time $hold-time l ralt)
-  ; (tap-hold $tap-time $hold-time ; rmet)
-  i i
-  spfn (tap-hold $tap-time $hold-time spc (layer-toggle fn))
+  escctrl esc  ;; Caps lock becomes Escape
+  ;; Home row modifiers using the advanced template
+  ;; Left hand: a=Meta/Win, s=Alt, d=Shift, f=Ctrl
+  a (t! charmod a lmet)
+  s (t! charmod s lalt)
+  d (t! charmod d lsft)
+  f (t! charmod f lctl)
+  ;; Right hand: j=Ctrl, k=Shift, l=Alt, ;=Meta/Win
+  j (t! charmod j rctl)
+  k (t! charmod k rsft)
+  l (t! charmod l ralt)
+  ; (t! charmod ; rmet)
+  i i  ;; i key remains unchanged
+  spfn (tap-hold $tap-time $hold-time spc (layer-toggle fn))  ;; Space: tap=space, hold=fn layer
 )
 
+;; Base layer definition
+;; Maps physical keys to their behaviors (using @ for aliases)
 (deflayer base
   1    2    3    4    5    6    7    8    9    0
   @escctrl @a @s @d @f @i @j @k @l @;
