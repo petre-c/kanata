@@ -10,8 +10,9 @@
 ;; Defines which physical keys are mapped in this configuration
 (defsrc
   1    2    3    4    5    6    7    8    9    0
-  caps a s d f i j k l ;
-  u o p m
+  q    w    e    r    t    y
+  caps a    s    d    f    i    j    k    l    ;
+  u    o    p    m
   spc
 )
 
@@ -70,15 +71,18 @@
 ;; Maps physical keys to their behaviors (using @ for aliases)
 (deflayer base
   1    2    3    4    5    6    7    8    9    0
+  q    w    e    r    t    y
   @escctrl @a @s @d @f @i @j @k @l @;
   u o p m
   @spfn
 )
 
-;; Function layer with i,j,k,l as arrow keys
+;; Function layer with i,j,k,l as arrow keys and additional mappings
+;; Space+Q = Escape, Space+A = Tab, Space+; = Enter
 (deflayer fn
   f1   f2   f3   f4   f5   f6   f7   f8   f9   f10
-  _    _    _    _    _    up   left down right _
+  esc  _    _    _    _    _
+  _    tab  _    _    _    up   left down right ret
   home end bspc del
   _
 )
