@@ -19,9 +19,11 @@
 (defvar
   tap-time 50
   hold-time 200
-  key-timing-delay 250  ;; delay for key-timing check
-  tap-timeout 200       ;; timeout for tap in tap-hold-release
-  hold-timeout 500      ;; timeout for hold activation
+  key-timing-delay 150  ;; delay for key-timing check (reduced for faster typing)
+  tap-timeout 150       ;; timeout for tap in tap-hold-release (reduced)
+  hold-timeout 200      ;; timeout for hold activation (reduced for quicker response)
+  ;; Eager tap - releases modifier immediately when another key is pressed
+  eager-tap-timeout 120 ;; timeout for eager tap behavior
 )
 
 ;; Template for advanced home row modifiers using switch and key-timing
@@ -29,7 +31,18 @@
 (deftemplate charmod (char mod)
   (switch 
     ((key-timing 3 less-than $key-timing-delay)) $char break
-    () (tap-hold-release-timeout $tap-timeout $hold-timeout $char $mod $char) break
+    () (tap-hold $tap-timeout $hold-timeout $char $mod) break
+  )
+)
+
+;; Template for 'a' key with smart timing to prevent accidental Win+R
+;; Uses a longer delay before modifier activation to allow normal typing
+(deftemplate a-special (char mod)
+  (switch 
+    ;; If typing fast (4 keys in 200ms), output character
+    ((key-timing 4 less-than 200)) $char break
+    ;; Otherwise use tap-hold with longer hold time for modifier
+    () (tap-hold $tap-timeout 300 $char $mod) break
   )
 )
 
@@ -38,8 +51,9 @@
 (defalias
   escctrl esc  ;; Caps lock becomes Escape
   ;; Home row modifiers using the advanced template
-  ;; Left hand: a=Meta/Win, s=Alt, d=Shift, f=Ctrl
-  a (t! charmod a lmet)
+  ;; Left hand: a=Meta/Win (using special timing to prevent accidental Win+R)
+  a (t! a-special a lmet)
+  ;; s=Alt, d=Shift, f=Ctrl (using standard template)
   s (t! charmod s lalt)
   d (t! charmod d lsft)
   f (t! charmod f lctl)
