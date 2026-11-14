@@ -75,8 +75,13 @@
   ;; always just typing (a roll), so those keys force the tap. Only a key of
   ;; the other hand, or a thumb, can make the home row key a modifier early.
   ;; This is what hold-trigger-key-positions does in the ZMK Corne config.
-  left-keys  (q w e r t a s d f g z x c v b)
-  right-keys (y u i o p h j k l ; n m , . / ')
+  ;; The home row keys themselves are NOT in the lists. Two modifiers of the
+  ;; same hand have to stack, for example J + ; + A for Ctrl+Win+A (the Deskbar
+  ;; workspace switch). With j k l ; in right-keys, pressing ; after J made J
+  ;; a plain "j" and the shortcut typed "j;a". The ZMK config gets the same
+  ;; effect with hold-trigger-on-release.
+  left-keys  (q w e r t g z x c v b)
+  right-keys (y u i o p h n m , . / ')
 )
 
 ;; ================================================================================
@@ -95,7 +100,7 @@
 ;; PARAMETERS:
 ;; - char: The character to output when tapped (e.g., 's' for the S key)
 ;; - mod: The modifier to activate when held (e.g., lalt for Left Alt)
-(deftemplate charmod (char mod tapkeys)
+(deftemplate charmod (char mod tapkeys held)
   (switch 
     ;; FAST TYPING CHECK: Have 3 keys been pressed within key-timing-delay (150ms)?
     ;; This detects rapid typing patterns where modifiers shouldn't activate
@@ -106,7 +111,12 @@
     ;; It was "3 keys within 150ms" before, which is so fast it rarely applied:
     ;; "worked" came out as "worED" because K, held a touch long over E and D,
     ;; became Shift.
-    ((key-timing 1 less-than $key-timing-delay)) $char break
+    ;; The guard is skipped while another home row key is physically held
+    ;; ($held). That is someone stacking modifiers, for example J then ; then
+    ;; A for Ctrl+Win+A, not someone typing a word. Without this the second
+    ;; modifier came within 150ms of the first and was typed as a letter,
+    ;; so the chord only worked when done very slowly.
+    ((and (key-timing 1 less-than $key-timing-delay) (not $held))) $char break
     
     ;; NORMAL/SLOW TYPING: Use tap-hold behavior
     ;; - Tap (release within tap-timeout) → output character
@@ -133,12 +143,12 @@
 ;; COMMON SCENARIO PREVENTED:
 ;; - Typing "are" quickly won't trigger Win+R
 ;; - You'd need to deliberately hold 'a' for 300ms to get Windows key
-(deftemplate a-special (char mod tapkeys)
+(deftemplate a-special (char mod tapkeys held)
   (switch 
     ;; ENHANCED FAST TYPING CHECK: 4 keys within 200ms
     ;; More conservative than standard keys to prevent accidental activation
     ;; Previous key less than 200ms ago -> plain character (see charmod).
-    ((key-timing 1 less-than 200)) $char break
+    ((and (key-timing 1 less-than 200) (not $held))) $char break
     
     ;; LONGER HOLD REQUIREMENT: 300ms instead of 200ms
     ;; Gives more safety margin against accidental Windows key activation
@@ -170,35 +180,43 @@
   ;; Uses special template with stricter timing to prevent Win+R accidents
   ;; Extra tap keys l n m h p u: Win+L locks the PC, Win+N/M/H/P/U open
   ;; system panels, and "al", "an", "am", "ah", "ap", "au" start words.
-  a (t! a-special a lmet (q w e r t a s d f g z x c v b l n m h p u))
+  a (t! a-special a lmet (q w e r t g z x c v b l n m h p u)
+     (or (input real s) (input real d) (input real f) (input real j) (input real k) (input real l) (input real ;)))
   
   ;; 'S' KEY: Tap for 's', Hold for Left Alt
   ;; Standard timing - useful for Alt+Tab, Alt+F4, etc.
   ;; Extra tap keys: the right-hand letters of common "s" bigrams (sh so si
   ;; su sy sp sk sl sn sm), so they never fire Alt+letter menu accelerators.
-  s (t! charmod s lalt (q w e r t a s d f g z x c v b y u i o p h k l n m))
+  s (t! charmod s lalt (q w e r t g z x c v b y u i o p h k l n m)
+     (or (input real a) (input real d) (input real f) (input real j) (input real k) (input real l) (input real ;)))
   
   ;; 'D' KEY: Tap for 'd', Hold for Left Shift  
   ;; Standard timing - useful for capitalization and shift-clicking
-  d (t! charmod d lsft $left-keys)
+  d (t! charmod d lsft $left-keys
+     (or (input real a) (input real s) (input real f) (input real j) (input real k) (input real l) (input real ;)))
   
   ;; 'F' KEY: Tap for 'f', Hold for Left Control
   ;; Standard timing - useful for Ctrl+C, Ctrl+V, etc.
-  f (t! charmod f lctl $left-keys)
+  f (t! charmod f lctl $left-keys
+     (or (input real a) (input real s) (input real d) (input real j) (input real k) (input real l) (input real ;)))
   
   ;; ============ RIGHT HAND HOME ROW MODIFIERS ============
   ;; 'J' KEY: Tap for 'j', Hold for Right Control
-  j (t! charmod j rctl $right-keys)
+  j (t! charmod j rctl $right-keys
+     (or (input real a) (input real s) (input real d) (input real f) (input real k) (input real l) (input real ;)))
   
   ;; 'K' KEY: Tap for 'k', Hold for Right Shift
-  k (t! charmod k rsft $right-keys)
+  k (t! charmod k rsft $right-keys
+     (or (input real a) (input real s) (input real d) (input real f) (input real j) (input real l) (input real ;)))
   
   ;; 'L' KEY: Tap for 'l', Hold for Right Alt
   ;; Extra tap keys a e: "la" and "le" start words after a pause.
-  l (t! charmod l ralt (y u i o p h j k l ; n m , . / ' a e))
+  l (t! charmod l ralt (y u i o p h n m , . / ' a e)
+     (or (input real a) (input real s) (input real d) (input real f) (input real j) (input real k) (input real ;)))
   
   ;; ';' KEY: Tap for ';', Hold for Right Windows/Meta
-  ; (t! charmod ; rmet $right-keys)
+  ; (t! charmod ; rmet $right-keys
+     (or (input real a) (input real s) (input real d) (input real f) (input real j) (input real k) (input real l)))
   
   ;; 'I' KEY: No modification - passes through as normal 'i'
   i i
