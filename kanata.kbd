@@ -1,88 +1,303 @@
-;; Global configuration settings
-;; process-unmapped-keys: allows keys not defined in layers to pass through
+;; ================================================================================
+;; KANATA KEYBOARD CONFIGURATION
+;; ================================================================================
+;; This configuration implements home row modifiers (HRM) with intelligent timing
+;; to distinguish between normal typing and modifier key activation.
+;;
+;; KEY FEATURES:
+;; - Home row keys (a,s,d,f,j,k,l,;) act as modifiers when held
+;; - Space bar toggles function layer for arrow keys and special functions
+;; - Smart timing prevents accidental modifier activation during fast typing
+;; ================================================================================
+
+;; ================================================================================
+;; GLOBAL CONFIGURATION SETTINGS
+;; ================================================================================
 (defcfg
+  ;; Allow keys not explicitly defined in layers to pass through normally
+  ;; This means you don't have to map every single key - unmapped keys work as usual
   process-unmapped-keys yes
-;;  tap-next-release yes ;; Enable tap-next-release behavior
-;;  log-layer-changes yes
+  
+  ;; OPTIONAL SETTINGS (currently disabled):
+  ;; tap-next-release yes  ;; Would enable tap behavior on next key release
+  ;; log-layer-changes yes ;; Would log layer changes for debugging
 )
 
-;; Source keyboard layout definition
-;; Defines which physical keys are mapped in this configuration
+;; ================================================================================
+;; SOURCE KEYBOARD LAYOUT DEFINITION
+;; ================================================================================
+;; This section defines which physical keys we're remapping.
+;; Only keys listed here can be remapped in the layers below.
+;; Keys are arranged to match their physical position on the keyboard.
 (defsrc
   1    2    3    4    5    6    7    8    9    0
-  q    w    e    r    t    y
-  caps a    s    d    f    i    j    k    l    ;
-  u    o    p    m
-  spc
+  q    w    e    r    t    y    n    [    ]
+  caps a    s    d    f    i    j    k    l    ;    '
+  u    o    p    m    /
+  spc  f13  f14
 )
 
-;; Variables for timing configuration
+;; ================================================================================
+;; TIMING VARIABLES FOR HOME ROW MODIFIERS
+;; ================================================================================
+;; These timing values control how the keyboard distinguishes between:
+;; - TAPPING a key (for normal character input)
+;; - HOLDING a key (to activate it as a modifier)
+;; All values are in milliseconds (ms)
 (defvar
+  ;; Maximum time a key can be held to still count as a "tap" (character input)
+  ;; If released within 50ms → always outputs the character
   tap-time 50
+  
+  ;; Minimum time a key must be held to activate as a modifier
+  ;; Hold for 200ms+ → activates the modifier function
   hold-time 200
-  key-timing-delay 150  ;; delay for key-timing check (reduced for faster typing)
-  tap-timeout 150       ;; timeout for tap in tap-hold-release (reduced)
-  hold-timeout 200      ;; timeout for hold activation (reduced for quicker response)
-  ;; Eager tap - releases modifier immediately when another key is pressed
-  eager-tap-timeout 120 ;; timeout for eager tap behavior
+  
+  ;; Time window for detecting "fast typing" patterns
+  ;; If 3 keys are pressed within 150ms → system assumes you're typing normally
+  ;; This prevents modifiers from activating during rapid typing
+  key-timing-delay 150
+  
+  ;; Maximum time to wait before deciding between tap vs hold
+  ;; After 150ms, if key is still pressed → starts transitioning to hold mode
+  tap-timeout 150
+  
+  ;; Time required to definitively activate hold mode (modifier)
+  ;; After 200ms of holding → modifier is active
+  hold-timeout 200
+  
+  ;; Eager tap behavior (currently unused but available)
+  ;; Would release modifier immediately when another key is pressed
+  eager-tap-timeout 120
+
+  ;; SAME-HAND KEY LISTS FOR THE HOME ROW MODIFIERS
+  ;; A home row key held together with a key of the SAME hand is almost
+  ;; always just typing (a roll), so those keys force the tap. Only a key of
+  ;; the other hand, or a thumb, can make the home row key a modifier early.
+  ;; This is what hold-trigger-key-positions does in the ZMK Corne config.
+  left-keys  (q w e r t a s d f g z x c v b)
+  right-keys (y u i o p h j k l ; n m , . / ')
 )
 
-;; Template for advanced home row modifiers using switch and key-timing
-;; This prevents accidental modifier activation while typing quickly
-(deftemplate charmod (char mod)
+;; ================================================================================
+;; SMART HOME ROW MODIFIER TEMPLATE
+;; ================================================================================
+;; This template creates intelligent home row modifiers that can distinguish
+;; between normal typing and intentional modifier use.
+;;
+;; HOW IT WORKS:
+;; 1. When you press a home row key, it first checks your typing speed
+;; 2. If you're typing fast (3 keys within 150ms) → outputs the character
+;; 3. If you're typing slowly or holding → uses tap-hold logic:
+;;    - Quick tap (< 150ms) → outputs character
+;;    - Hold (> 200ms) → activates modifier
+;;
+;; PARAMETERS:
+;; - char: The character to output when tapped (e.g., 's' for the S key)
+;; - mod: The modifier to activate when held (e.g., lalt for Left Alt)
+(deftemplate charmod (char mod tapkeys)
   (switch 
-    ((key-timing 3 less-than $key-timing-delay)) $char break
-    () (tap-hold $tap-timeout $hold-timeout $char $mod) break
+    ;; FAST TYPING CHECK: Have 3 keys been pressed within key-timing-delay (150ms)?
+    ;; This detects rapid typing patterns where modifiers shouldn't activate
+    ;; Recency 1 = the most recent key pressed before this one (per the Kanata
+    ;; docs). So: if the previous key went down less than key-timing-delay
+    ;; ago, this is mid-word typing and the key is a plain character at once.
+    ;; Same idea as require-prior-idle-ms = 150 in the ZMK Corne config.
+    ;; It was "3 keys within 150ms" before, which is so fast it rarely applied:
+    ;; "worked" came out as "worED" because K, held a touch long over E and D,
+    ;; became Shift.
+    ((key-timing 1 less-than $key-timing-delay)) $char break
+    
+    ;; NORMAL/SLOW TYPING: Use tap-hold behavior
+    ;; - Tap (release within tap-timeout) → output character
+    ;; - Hold (keep pressed for hold-timeout) → activate modifier
+    ;; tap-hold-release-keys: besides the hold-timeout, the key also becomes
+    ;; the modifier as soon as ANOTHER key is pressed and released while it
+    ;; is down (so a quick D + Space + U is Shift+Home without waiting 200ms),
+    ;; unless that other key is in tapkeys, which forces the character.
+    () (tap-hold-release-keys $tap-timeout $hold-timeout $char $mod $tapkeys) break
   )
 )
 
-;; Template for 'a' key with smart timing to prevent accidental Win+R
-;; Uses a longer delay before modifier activation to allow normal typing
-(deftemplate a-special (char mod)
+;; ================================================================================
+;; SPECIAL TEMPLATE FOR 'A' KEY (WINDOWS/META KEY)
+;; ================================================================================
+;; The 'a' key gets special treatment because it maps to the Windows/Meta key,
+;; which can trigger disruptive shortcuts (like Win+R opening the Run dialog).
+;;
+;; ENHANCED SAFETY FEATURES:
+;; 1. Stricter fast-typing detection: Checks 4 keys (not 3) within 200ms
+;; 2. Longer hold requirement: 300ms (not 200ms) to activate Windows key
+;; 3. This prevents accidental Win+R when typing words like "are" quickly
+;;
+;; COMMON SCENARIO PREVENTED:
+;; - Typing "are" quickly won't trigger Win+R
+;; - You'd need to deliberately hold 'a' for 300ms to get Windows key
+(deftemplate a-special (char mod tapkeys)
   (switch 
-    ;; If typing fast (4 keys in 200ms), output character
-    ((key-timing 4 less-than 200)) $char break
-    ;; Otherwise use tap-hold with longer hold time for modifier
-    () (tap-hold $tap-timeout 300 $char $mod) break
+    ;; ENHANCED FAST TYPING CHECK: 4 keys within 200ms
+    ;; More conservative than standard keys to prevent accidental activation
+    ;; Previous key less than 200ms ago -> plain character (see charmod).
+    ((key-timing 1 less-than 200)) $char break
+    
+    ;; LONGER HOLD REQUIREMENT: 300ms instead of 200ms
+    ;; Gives more safety margin against accidental Windows key activation
+    () (tap-hold-release-keys $tap-timeout 300 $char $mod $tapkeys) break
   )
 )
 
-;; Key aliases definitions
-;; Defines custom key behaviors including home row modifiers and layer toggles
+;; ================================================================================
+;; KEY ALIASES - HOME ROW MODIFIERS AND SPECIAL KEYS
+;; ================================================================================
+;; This section defines the actual key behaviors using the templates above.
+;; Each alias creates a dual-function key that acts differently when tapped vs held.
+;;
+;; HOME ROW MODIFIER LAYOUT:
+;; Left Hand:                    Right Hand:
+;; a = Win/Meta (special)        j = Ctrl
+;; s = Alt                       k = Shift  
+;; d = Shift                     l = Alt
+;; f = Ctrl                      ; = Win/Meta
+;;
+;; The 't!' syntax instantiates a template with specific parameters.
 (defalias
-  escctrl esc  ;; Caps lock becomes Escape
-  ;; Home row modifiers using the advanced template
-  ;; Left hand: a=Meta/Win (using special timing to prevent accidental Win+R)
-  a (t! a-special a lmet)
-  ;; s=Alt, d=Shift, f=Ctrl (using standard template)
-  s (t! charmod s lalt)
-  d (t! charmod d lsft)
-  f (t! charmod f lctl)
-  ;; Right hand: j=Ctrl, k=Shift, l=Alt, ;=Meta/Win
-  j (t! charmod j rctl)
-  k (t! charmod k rsft)
-  l (t! charmod l ralt)
-  ; (t! charmod ; rmet)
-  i i  ;; i key remains unchanged
-  spfn (tap-hold $tap-time $hold-time spc (layer-toggle fn))  ;; Space: tap=space, hold=fn layer
+  ;; CAPS LOCK → ESCAPE
+  ;; Makes Caps Lock output Escape for easier Vim-style editing
+  escctrl esc
+  
+  ;; ============ LEFT HAND HOME ROW MODIFIERS ============
+  ;; 'A' KEY: Tap for 'a', Hold for Left Windows/Meta
+  ;; Uses special template with stricter timing to prevent Win+R accidents
+  ;; Extra tap keys l n m h p u: Win+L locks the PC, Win+N/M/H/P/U open
+  ;; system panels, and "al", "an", "am", "ah", "ap", "au" start words.
+  a (t! a-special a lmet (q w e r t a s d f g z x c v b l n m h p u))
+  
+  ;; 'S' KEY: Tap for 's', Hold for Left Alt
+  ;; Standard timing - useful for Alt+Tab, Alt+F4, etc.
+  ;; Extra tap keys: the right-hand letters of common "s" bigrams (sh so si
+  ;; su sy sp sk sl sn sm), so they never fire Alt+letter menu accelerators.
+  s (t! charmod s lalt (q w e r t a s d f g z x c v b y u i o p h k l n m))
+  
+  ;; 'D' KEY: Tap for 'd', Hold for Left Shift  
+  ;; Standard timing - useful for capitalization and shift-clicking
+  d (t! charmod d lsft $left-keys)
+  
+  ;; 'F' KEY: Tap for 'f', Hold for Left Control
+  ;; Standard timing - useful for Ctrl+C, Ctrl+V, etc.
+  f (t! charmod f lctl $left-keys)
+  
+  ;; ============ RIGHT HAND HOME ROW MODIFIERS ============
+  ;; 'J' KEY: Tap for 'j', Hold for Right Control
+  j (t! charmod j rctl $right-keys)
+  
+  ;; 'K' KEY: Tap for 'k', Hold for Right Shift
+  k (t! charmod k rsft $right-keys)
+  
+  ;; 'L' KEY: Tap for 'l', Hold for Right Alt
+  ;; Extra tap keys a e: "la" and "le" start words after a pause.
+  l (t! charmod l ralt (y u i o p h j k l ; n m , . / ' a e))
+  
+  ;; ';' KEY: Tap for ';', Hold for Right Windows/Meta
+  ; (t! charmod ; rmet $right-keys)
+  
+  ;; 'I' KEY: No modification - passes through as normal 'i'
+  i i
+  
+  ;; SPACE BAR: Tap for space, Hold to activate function layer
+  ;; While held, activates the 'fn' layer for arrow keys and special functions
+  ;; Uses very short tap-time (50ms) for responsive layer switching
+  ;; tap-hold-release: also becomes the fn layer as soon as another key is
+  ;; pressed AND released while Space is down, without waiting for hold-time.
+  ;; That makes a quick Space+P a Backspace (and Ctrl+Space+P a Ctrl+Backspace);
+  ;; with plain tap-hold a chord shorter than 200ms typed "space, p".
+  ;; A roll from Space into the next letter (letter released after Space) is
+  ;; still a space followed by the letter.
+  ;; The key list: letters that do nothing special on the fn layer. Pressing one
+  ;; of them while Space is still down means Space was just a space typed with
+  ;; a lingering thumb, so it resolves as a tap at once. Without the list,
+  ;; "i'll be" came out as "i'llb e": B was pressed and released under a
+  ;; lingering Space, which made Space the fn layer and swallowed the space.
+  ;; S, D and F are not in the list because they are Alt, Shift and Ctrl for
+  ;; chords such as Space + D + U (Shift+Home).
+  spfn (tap-hold-release-keys $tap-time $hold-time spc (layer-toggle fn) (w e r t g h z x c v b , .))
+
+  ;; LEFT THUMB OF THE W-CORNE: Tap for space, Hold for Left Shift
+  ;; The W-CORNE's left space thumb sends F13, a key no other keyboard here
+  ;; has, so this alias only ever applies to that board.
+  ;; tap-hold-press is "hold-preferred", the same rule ZMK's &mt uses: the key
+  ;; becomes Shift the moment any other key is pressed while it is down, so a
+  ;; fast "?" or capital works even if the thumb is released before the letter.
+  ;; Released alone within 200ms it is a space.
+  ;; The first number is 0 on purpose: no "tap again and hold to repeat space",
+  ;; so Space followed at once by Shift+letter gives a capital.
+  lthumb (tap-hold-press 0 200 spc lsft)
+
+  ;; SCREENSHOT KEY OF THE W-CORNE: Win+Shift+S (Snipping Tool overlay)
+  ;; The board's two left thumbs pressed together send F14. The board used to
+  ;; send Win+Shift+S itself, but S is a home row tap-hold key in this file,
+  ;; so Kanata delayed the S until Win and Shift were already released and
+  ;; the shortcut never formed. Sending the chord from here avoids that.
+  snip M-S-s
 )
 
-;; Base layer definition
-;; Maps physical keys to their behaviors (using @ for aliases)
+;; ================================================================================
+;; BASE LAYER - DEFAULT KEYBOARD LAYOUT
+;; ================================================================================
+;; This is the main layer active by default.
+;; The @ symbol references aliases defined above.
+;; Keys map to their physical positions from defsrc.
 (deflayer base
   1    2    3    4    5    6    7    8    9    0
-  q    w    e    r    t    y
-  @escctrl @a @s @d @f @i @j @k @l @;
-  u o p m
-  @spfn
+  q    w    e    r    t    y    n    [    ]
+  @escctrl @a @s @d @f @i @j @k @l @; '
+  u o p m /
+  @spfn @lthumb @snip
 )
 
-;; Function layer with i,j,k,l as arrow keys and additional mappings
-;; Space+Q = Escape, Space+A = Tab, Space+; = Enter
+;; ================================================================================
+;; FUNCTION LAYER - ACTIVATED BY HOLDING SPACE
+;; ================================================================================
+;; This layer is active while holding the space bar.
+;; It provides arrow keys on the home row and other useful shortcuts.
+;;
+;; KEY MAPPINGS IN THIS LAYER:
+;; Navigation (Vi-style):
+;;   Space+i = Up arrow
+;;   Space+j = Left arrow  
+;;   Space+k = Down arrow
+;;   Space+l = Right arrow
+;;
+;; Text Editing:
+;;   Space+u = Home
+;;   Space+o = End
+;;   Space+p = Backspace
+;;   Space+m = Delete
+;;   Space+/ = Backslash (\)
+;;
+;; Navigation:
+;;   Space+y = Page Up
+;;   Space+n = Page Down
+;;
+;; Special Keys:
+;;   Space+q = Escape
+;;   Space+a = Tab
+;;   Space+; = Hyphen (-)
+;;   Space+' = Equals (=)
+;;
+;; Function Keys:
+;;   Space+1 through Space+0 = F1 through F10
+;;   Space+[ = F11
+;;   Space+] = F12
+;;
+;; The underscore (_) means "transparent" - the key passes through unchanged
 (deflayer fn
   f1   f2   f3   f4   f5   f6   f7   f8   f9   f10
-  esc  _    _    _    _    _
-  _    tab  _    _    _    up   left down right ret
-  home end bspc del
-  _
+  esc  _    _    _    _    pgup pgdn f11  f12
+  ;; s d f are plain Alt, Shift, Ctrl here, with no tap-hold timing: once Space
+  ;; is held, Space+D+U is Shift+Home at any speed. On the base layer D would
+  ;; first have to pass the "previous key less than 150ms ago" typing guard,
+  ;; which turned a quick End, then Shift+Home into "d", Home.
+  _    tab  lalt lsft lctl up   left down right - =
+  home end bspc del \
+  _ _ _
 )
