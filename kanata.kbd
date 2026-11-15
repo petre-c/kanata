@@ -34,7 +34,7 @@
   q    w    e    r    t    y    n    [    ]
   caps a    s    d    f    i    j    k    l    ;    '
   u    o    p    m    /
-  spc  f13  f14
+  spc  f13  f14  f16  f17
   ;; h is listed only so the fn layer can put PageUp on it
   h
 )
@@ -258,6 +258,16 @@
   ;; so Kanata delayed the S until Win and Shift were already released and
   ;; the shortcut never formed. Sending the chord from here avoids that.
   snip M-S-s
+
+  ;; The two C# lambda shortcuts from the ZMK Corne. On the W-CORNE they sit
+  ;; on the right outer column of the board's layer 2 (outer right thumb held):
+  ;; the top key sends F16, the bottom key sends F17. They used to be macros
+  ;; stored on the board, which did not come out right, so the board now sends
+  ;; one spare key and the text is typed from here.
+  ;;   lam   =>
+  ;;   lamx  (x => x.)  and then Left, so the caret sits before the ")"
+  lam  (macro = S-.)
+  lamx (macro S-9 x spc = S-. spc x . S-0 left)
 )
 
 ;; ================================================================================
@@ -271,7 +281,7 @@
   q    w    e    r    t    y    n    [    ]
   @escctrl @a @s @d @f @i @j @k @l @; '
   u o p m /
-  @spfn @lthumb @snip
+  @spfn @lthumb @snip @lam @lamx
   h
 )
 
@@ -321,7 +331,7 @@
   ;; which turned a quick End, then Shift+Home into "d", Home.
   _    tab  lalt lsft lctl up   left down right - =
   home end bspc del \
-  _ _ _
+  _ _ _ _ _
   ;; Space+H = PageUp, right above PageDown on N. H stays in spfn's tap list,
   ;; so this only fires once Space has been held past the hold time; a fast
   ;; " h" while typing is still a space and an h. Space+Y is PageUp as well.
