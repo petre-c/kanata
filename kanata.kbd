@@ -35,6 +35,8 @@
   caps a    s    d    f    i    j    k    l    ;    '
   u    o    p    m    /
   spc  f13  f14
+  ;; h is listed only so the fn layer can put PageUp on it
+  h
 )
 
 ;; ================================================================================
@@ -270,6 +272,7 @@
   @escctrl @a @s @d @f @i @j @k @l @; '
   u o p m /
   @spfn @lthumb @snip
+  h
 )
 
 ;; ================================================================================
@@ -294,6 +297,7 @@
 ;;
 ;; Navigation:
 ;;   Space+y = Page Up
+;;   Space+h = Page Up (after Space has been held for a moment)
 ;;   Space+n = Page Down
 ;;
 ;; Special Keys:
@@ -318,4 +322,8 @@
   _    tab  lalt lsft lctl up   left down right - =
   home end bspc del \
   _ _ _
+  ;; Space+H = PageUp, right above PageDown on N. H stays in spfn's tap list,
+  ;; so this only fires once Space has been held past the hold time; a fast
+  ;; " h" while typing is still a space and an h. Space+Y is PageUp as well.
+  pgup
 )
