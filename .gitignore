@@ -1,5 +1,9 @@
-# Exclude Kanata executable
+# Exclude downloaded binaries: Kanata (both builds) and the Interception
+# driver's library and installer. Sources are named in the .cmd files.
 kanata.exe
+kanata_wintercept.exe
+interception.dll
+install-interception.exe
 
 # OS generated files
 .DS_Store
