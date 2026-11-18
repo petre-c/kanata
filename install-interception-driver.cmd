@@ -19,7 +19,13 @@ rem release v1.0.1, "command line installer".
 
 net session >nul 2>&1
 if errorlevel 1 (
-    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '%1' -Verb RunAs"
+    rem Start-Process refuses an empty -ArgumentList, so the argument is only
+    rem passed on when there is one (the word "uninstall").
+    if "%~1"=="" (
+        powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    ) else (
+        powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '%~1' -Verb RunAs"
+    )
     exit /b
 )
 
