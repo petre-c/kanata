@@ -242,7 +242,18 @@
   ;; lingering Space, which made Space the fn layer and swallowed the space.
   ;; S, D and F are not in the list because they are Alt, Shift and Ctrl for
   ;; chords such as Space + D + U (Shift+Home).
-  spfn (tap-hold-release-keys $tap-time $hold-time spc (layer-toggle fn) (w e r t g h z x c v b , .))
+  ;;
+  ;; The switch in front: while a Win key of the home row (A or ;) is
+  ;; physically down, Space is sent the moment it is pressed, with no
+  ;; tap-or-hold wait. The tap-hold only sends Space when the thumb comes back
+  ;; up, so Win+Alt+Space (; and L held, then Space) depended on letting go of
+  ;; Space before the modifiers. In the capture of 2026-11-19 Win was released
+  ;; 2 ms before Space and the shortcut did not form. The price: with A or ;
+  ;; held first, Space cannot become the fn layer. For Win+arrow, press Space
+  ;; first or use the board's layer 2 arrows.
+  spfn (switch
+    ((or (input real a) (input real ;))) spc break
+    () (tap-hold-release-keys $tap-time $hold-time spc (layer-toggle fn) (w e r t g h z x c v b , .)) break)
 
   ;; LEFT THUMB OF THE W-CORNE: Tap for space, Hold for Left Shift
   ;; The W-CORNE's left space thumb sends F13, a key no other keyboard here
