@@ -37,6 +37,9 @@
   spc  f13  f14  f16  f17
   ;; h is listed only so the fn layer can put PageUp on it
   h
+  ;; The W-CORNE's symbol row on its layer 1 (middle thumb held, bottom row):
+  ;; F18 to F24 stand for ! @ # $ % ^ &. See the base layer for why.
+  f18  f19  f20  f21  f22  f23  f24
 )
 
 ;; ================================================================================
@@ -283,6 +286,15 @@
   u o p m /
   @spfn @lthumb @snip @lam @lamx
   h
+  ;; ! @ # $ % ^ & for the W-CORNE. The board used to send Shift+digit itself.
+  ;; Its middle thumb is Enter on tap and layer 1 on hold, decided on the
+  ;; board; on a quick thumb+key press the board replays the key the moment it
+  ;; is released, as four reports within a millisecond (Shift down, digit down,
+  ;; digit up, Shift up), and the radio link only delivered the first and the
+  ;; last: Shift went down and up and the digit never arrived (capture of
+  ;; 2026-11-19). A single plain key survives that, so the board now sends one
+  ;; F key per symbol and the Shift+digit is produced here.
+  S-1  S-2  S-3  S-4  S-5  S-6  S-7
 )
 
 ;; ================================================================================
@@ -336,4 +348,5 @@
   ;; so this only fires once Space has been held past the hold time; a fast
   ;; " h" while typing is still a space and an h. Space+Y is PageUp as well.
   pgup
+  _ _ _ _ _ _ _
 )
