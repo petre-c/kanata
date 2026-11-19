@@ -17,6 +17,22 @@
   ;; Allow keys not explicitly defined in layers to pass through normally
   ;; This means you don't have to map every single key - unmapped keys work as usual
   process-unmapped-keys yes
+
+  ;; Only remap the W-CORNE (USB id 55D4:0461). Every other keyboard is left
+  ;; alone and reaches Windows untouched. That matters for Remote Desktop into
+  ;; this PC: the keyboard of the connecting computer shows up here as one more
+  ;; keyboard device, Kanata used to grab it and send its output to the
+  ;; physical keyboard stack, which a remote session does not listen to, so
+  ;; nothing could be typed over RDP (2026-11-19). Only the Interception build
+  ;; reads this option; the hook build ignores it.
+  ;; The value is the hardware id as bytes (UTF-16), as Kanata prints it:
+  ;;   HID\VID_55D4&PID_0461&REV_0100&MI_00, HID\VID_55D4&PID_0461&MI_00, ...
+  ;; To read it again, add windows-interception-keyboard-hwids-exclude ("1, 2")
+  ;; to a copy of this file, run kanata_wintercept.exe --debug with it and
+  ;; look for "is intercepted" in the output after pressing a key.
+  windows-interception-keyboard-hwids (
+    "72, 0, 73, 0, 68, 0, 92, 0, 86, 0, 73, 0, 68, 0, 95, 0, 53, 0, 53, 0, 68, 0, 52, 0, 38, 0, 80, 0, 73, 0, 68, 0, 95, 0, 48, 0, 52, 0, 54, 0, 49, 0, 38, 0, 82, 0, 69, 0, 86, 0, 95, 0, 48, 0, 49, 0, 48, 0, 48, 0, 38, 0, 77, 0, 73, 0, 95, 0, 48, 0, 48, 0, 0, 0, 72, 0, 73, 0, 68, 0, 92, 0, 86, 0, 73, 0, 68, 0, 95, 0, 53, 0, 53, 0, 68, 0, 52, 0, 38, 0, 80, 0, 73, 0, 68, 0, 95, 0, 48, 0, 52, 0, 54, 0, 49, 0, 38, 0, 77, 0, 73, 0, 95, 0, 48, 0, 48, 0, 0, 0, 72, 0, 73, 0, 68, 0, 92, 0, 86, 0, 73, 0, 68, 0, 95, 0, 53, 0, 53, 0, 68, 0, 52, 0, 38, 0, 85, 0, 80, 0, 58, 0, 48, 0, 48, 0, 48, 0, 49, 0, 95, 0, 85, 0, 58, 0, 48, 0, 48, 0, 48, 0, 54, 0, 0, 0, 72, 0, 73, 0, 68, 0, 95, 0, 68, 0, 69, 0, 86, 0, 73, 0, 67, 0, 69, 0, 95, 0, 83, 0, 89, 0, 83, 0, 84, 0, 69, 0, 77, 0, 95, 0, 75, 0, 69, 0, 89, 0, 66, 0, 79, 0, 65, 0, 82, 0, 68, 0, 0, 0, 72, 0, 73, 0, 68, 0, 95, 0, 68, 0, 69, 0, 86, 0, 73, 0, 67, 0, 69, 0, 95, 0, 85, 0, 80, 0, 58, 0, 48, 0, 48, 0, 48, 0, 49, 0, 95, 0, 85, 0, 58, 0, 48, 0, 48, 0, 48, 0, 54, 0, 0, 0, 72, 0, 73, 0, 68, 0, 95, 0, 68, 0, 69, 0, 86, 0, 73, 0, 67, 0, 69"
+  )
   
   ;; OPTIONAL SETTINGS (currently disabled):
   ;; tap-next-release yes  ;; Would enable tap behavior on next key release
