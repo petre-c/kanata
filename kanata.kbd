@@ -91,6 +91,13 @@
   ;; Would release modifier immediately when another key is pressed
   eager-tap-timeout 120
 
+  ;; True when the key Kanata sent last was a modifier, that is, when the
+  ;; previous home row key was decided as a hold. Used by charmod and
+  ;; a-special to tell stacking modifiers (J, then ; for Ctrl+Win) from a
+  ;; fast roll over the home row inside a word ("asdf").
+  after-mod (or (key-history lmet 1) (key-history lalt 1) (key-history lsft 1) (key-history lctl 1)
+                (key-history rmet 1) (key-history ralt 1) (key-history rsft 1) (key-history rctl 1))
+
   ;; SAME-HAND KEY LISTS FOR THE HOME ROW MODIFIERS
   ;; A home row key held together with a key of the SAME hand is almost
   ;; always just typing (a roll), so those keys force the tap. Only a key of
@@ -137,8 +144,17 @@
     ;; A for Ctrl+Win+A, not someone typing a word. Without this the second
     ;; modifier came within 150ms of the first and was typed as a letter,
     ;; so the chord only worked when done very slowly.
-    ((and (key-timing 1 less-than $key-timing-delay) (not $held))) $char break
-    
+    ;; But only when the key before this one came out as a modifier
+    ;; ($after-mod). A fast "asdf" also has another home row key physically
+    ;; down at every press, and with $held alone it skipped the guard: D then
+    ;; waited as a tap-hold, F was pressed and released under it, and the
+    ;; result was "asF" (capture of 2026-11-22). When the previous key came
+    ;; out as a letter this is a roll inside a word, so the guard applies
+    ;; again. A key pressed while an earlier home row key is still undecided
+    ;; waits in Kanata's queue and is looked at only once that key has become
+    ;; a letter or a modifier, so "the key before" is always already decided.
+    ((and (key-timing 1 less-than $key-timing-delay) (not (and $held $after-mod)))) $char break
+
     ;; NORMAL/SLOW TYPING: Use tap-hold behavior
     ;; - Tap (release within tap-timeout) → output character
     ;; - Hold (keep pressed for hold-timeout) → activate modifier
@@ -169,7 +185,7 @@
     ;; ENHANCED FAST TYPING CHECK: 4 keys within 200ms
     ;; More conservative than standard keys to prevent accidental activation
     ;; Previous key less than 200ms ago -> plain character (see charmod).
-    ((and (key-timing 1 less-than 200) (not $held))) $char break
+    ((and (key-timing 1 less-than 200) (not (and $held $after-mod)))) $char break
     
     ;; LONGER HOLD REQUIREMENT: 300ms instead of 200ms
     ;; Gives more safety margin against accidental Windows key activation
